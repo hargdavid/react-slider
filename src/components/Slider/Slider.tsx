@@ -2,14 +2,6 @@ import { makeStyles } from "@material-ui/core/styles";
 import clsx from "clsx";
 import React, { Children, createRef, useEffect, useState } from "react";
 
-/* TODOS:
-  - inifinite scroll
-  - export the click functions
-  - wcag
-  - export functions
-  - rubberband effect
-*/
-
 const useStyles = makeStyles(() => ({
   root: {
     display: "flex",
@@ -18,9 +10,6 @@ const useStyles = makeStyles(() => ({
     overflowX: "hidden",
     width: "100%",
     cursor: "grab",
-    "&::-webkit-scrollbar": {
-      display: "none",
-    },
   },
   grabbing: {
     cursor: "grabbing",
@@ -33,45 +22,60 @@ const useStyles = makeStyles(() => ({
   },
   listItem: {
     display: "inline-flex",
-    "&:nth-child(0)": {
-      width: "100%",
-    },
   },
 }));
 
 interface ISliderSettings {
-  dots?: boolean;
-  infinite?: boolean;
   speed?: number;
   slidesToShow?: number;
   slidesToScroll?: number;
   draggable?: boolean;
+  children: React.ReactChild[];
 }
 
-type Props = ISliderSettings;
+interface ISliderValues {
+  goToNext: () => void;
+  goToPrevious: () => void;
+  goToSlide: (index: number) => void;
+  render: unknown; //TODO
+  currentStep: number;
+}
 
-const Slider: React.FC<Props> = ({
-  dots = false,
-  infinite = false,
+export const useSlider = ({
   speed = 500,
   slidesToShow = 1,
   slidesToScroll = 1,
   draggable = true,
   children,
-}) => {
+}: ISliderSettings): ISliderValues => {
   const classes = useStyles();
   const wrapperRef = createRef<HTMLDivElement>();
   const listRef = createRef<HTMLDivElement>();
   const numbOfSlides = Children.toArray(children).length;
   const [wrapperWidth, setWrapperWidth] = useState<number>(0);
   const [grabbing, setGrabbing] = useState<boolean>(false);
-  const [currentXPosition, setCurrentXPosition] = useState<number>(-0);
-  const [previousXPosition, setPreviousXPosition] = useState<number>(-0);
+  const [movingXPosition, setMovingXPosition] = useState<number>(-0);
+  const [stoppedXPosition, setStoppedXPosition] = useState<number>(-0);
   const step = 100 / (numbOfSlides / slidesToScroll);
-  const maxStep = -100 + 100 / (numbOfSlides / slidesToShow);
+  const minStep = -100 + 100 / (numbOfSlides / slidesToShow);
   const [touchDown, setTouchDown] = useState<number>(0);
   const [currentSpeed, setCurrentSpeed] = useState<number>(speed);
-  const currentStep = 1 - currentXPosition / step; //TODO do something with this
+  const [currentStep, setCurrentStep] = useState<number>(0);
+  const outOfBoundsSpeed = 800;
+  const [visibleSlides, setVisibleSlides] = useState<{
+    start: number;
+    end: number;
+  }>({
+    start: currentStep,
+    end: slidesToShow,
+  });
+
+  useEffect(() => {
+    setVisibleSlides({
+      start: (Math.abs(stoppedXPosition / 100) * 100) / step,
+      end: (Math.abs(stoppedXPosition / 100) * 100) / step + slidesToShow - 1,
+    });
+  }, [stoppedXPosition]);
 
   useEffect(() => {
     if (wrapperRef.current?.offsetWidth) {
@@ -80,33 +84,44 @@ const Slider: React.FC<Props> = ({
   }, [wrapperRef]);
 
   const goToNext = () => {
-    setCurrentXPosition(
-      currentXPosition - step < maxStep ? maxStep : currentXPosition - step
+    setMovingXPosition(
+      movingXPosition - step < minStep ? minStep : movingXPosition - step
     );
-    setPreviousXPosition(
-      currentXPosition - step < maxStep ? maxStep : currentXPosition - step
+    setStoppedXPosition(
+      movingXPosition - step < minStep ? minStep : movingXPosition - step
     );
   };
+
   const goToPrevious = () => {
-    setCurrentXPosition(
-      currentXPosition + step > 0 ? 0 : currentXPosition + step
+    setMovingXPosition(movingXPosition + step > 0 ? 0 : movingXPosition + step);
+    setStoppedXPosition(
+      movingXPosition + step > 0 ? 0 : movingXPosition + step
     );
-    setPreviousXPosition(
-      currentXPosition + step > 0 ? 0 : currentXPosition + step
-    );
+  };
+
+  const goToSlide = (index: number) => {
+    setCurrentStep(index);
+    const newXValue = -(100 / numbOfSlides) * index;
+    if (newXValue < minStep) {
+      setMovingXPosition(minStep);
+      setStoppedXPosition(minStep);
+    } else {
+      setMovingXPosition(-(100 / numbOfSlides) * index);
+      setStoppedXPosition(-(100 / numbOfSlides) * index);
+    }
   };
 
   const onDrag = (position: number, previousPosition: number) => {
     if (!grabbing) {
       return;
     }
-    const listWidth = listRef.current?.offsetWidth;
-    setCurrentSpeed(0);
+    const listWidth = listRef.current?.offsetWidth ?? 1;
+    const newTransformValue =
+      movingXPosition - ((previousPosition - position) / listWidth) * 100;
+    const outOfBounds = minStep > newTransformValue || 0 < newTransformValue;
+    setCurrentSpeed(outOfBounds ? outOfBoundsSpeed : 0);
     setTouchDown(position);
-    setCurrentXPosition(
-      currentXPosition -
-        ((previousPosition - position) / (listWidth || 1)) * 100
-    );
+    setMovingXPosition(newTransformValue);
   };
 
   const stoppedMoving = () => {
@@ -115,40 +130,30 @@ const Slider: React.FC<Props> = ({
     const percentageOfChange = 25;
 
     const shouldChange =
-      (Math.abs(previousXPosition - currentXPosition) / step) * 100 >=
+      (Math.abs(stoppedXPosition - movingXPosition) / step) * 100 >=
       percentageOfChange;
-    const previous = previousXPosition - currentXPosition < 0;
+    const previous = stoppedXPosition - movingXPosition < 0;
 
     const newValue = shouldChange
       ? previous
-        ? previousXPosition + step
-        : previousXPosition - step
-      : previousXPosition;
+        ? stoppedXPosition + step
+        : stoppedXPosition - step
+      : stoppedXPosition;
 
-    if (newValue > 0) {
-      setCurrentXPosition(0);
-      setPreviousXPosition(0);
-    } else if (newValue < maxStep) {
-      setCurrentXPosition(maxStep);
-      setPreviousXPosition(maxStep);
-    } else {
-      setCurrentXPosition(newValue);
-      setPreviousXPosition(newValue);
+    if (!(newValue > 0 || newValue < minStep)) {
+      setCurrentStep(Math.abs(newValue / step));
     }
+
+    const newPosition =
+      newValue > 0 ? 0 : newValue < minStep ? minStep : newValue;
+
+    setMovingXPosition(newPosition);
+    setStoppedXPosition(newPosition);
   };
 
   const startDragging = (position: number) => {
     setGrabbing(true);
     setTouchDown(position);
-  };
-
-  const goToSlide = (index: number) => {
-    const newXValue = -(100 / numbOfSlides) * index;
-    if (newXValue < maxStep) {
-      setCurrentXPosition(maxStep);
-    } else {
-      setCurrentXPosition(-(100 / numbOfSlides) * index);
-    }
   };
 
   useEffect(() => {
@@ -167,8 +172,13 @@ const Slider: React.FC<Props> = ({
     };
   }, []);
 
-  return (
-    <>
+  return {
+    goToNext,
+    goToPrevious,
+    goToSlide,
+    currentStep,
+    //maybe add the props here instead???
+    render: (
       <div className={classes.root} ref={wrapperRef}>
         <div
           ref={listRef}
@@ -202,10 +212,10 @@ const Slider: React.FC<Props> = ({
           onMouseOut={draggable ? () => stoppedMoving() : undefined}
           style={{
             transition: `transform ${currentSpeed}ms ease`,
-            transform: `translateX(${currentXPosition}%)`,
+            transform: `translateX(${movingXPosition}%)`,
           }}
         >
-          {Children.map(children, (child) => {
+          {Children.map(children, (child: React.ReactChild, index: number) => {
             if (React.isValidElement(child)) {
               return (
                 <div
@@ -213,6 +223,10 @@ const Slider: React.FC<Props> = ({
                     width: wrapperWidth / slidesToShow,
                   }}
                   className={classes.listItem}
+                  data-index={index}
+                  aria-hidden={
+                    index < visibleSlides.start || index > visibleSlides.end
+                  }
                 >
                   {React.cloneElement(child, {
                     style: { ...child.props.style, width: "100%" },
@@ -223,26 +237,6 @@ const Slider: React.FC<Props> = ({
           })}
         </div>
       </div>
-
-      {/* TODO only export these functions */}
-      {dots && (
-        <div className="dots">
-          {new Array(numbOfSlides).fill(1).map((value, key) => {
-            return (
-              <button key={key} onClick={() => goToSlide(key)}>
-                {key}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      <div>
-        <button onClick={goToPrevious}>Prev</button>
-        <button onClick={goToNext}>Next</button>
-      </div>
-    </>
-  );
+    ),
+  };
 };
-
-export default Slider;
