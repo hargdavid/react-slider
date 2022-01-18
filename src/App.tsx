@@ -1,5 +1,5 @@
 import { makeStyles } from "@material-ui/core";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import Slider from "./components/Slider/Slider";
 
 const useStyles = makeStyles(() => ({
@@ -14,12 +14,8 @@ function App() {
   const sliderInstance = useRef<any>();
   const [currentStep, setCurrentStep] = useState<number>(0);
 
-  useEffect(() => {
-    console.log("sliderInstance", sliderInstance);
-  }, [sliderInstance]);
-
-  const onNext = () => {
-    sliderInstance?.current?.goToNext();
+  const onNext = async () => {
+    await sliderInstance?.current?.goToNext();
     setCurrentStep(sliderInstance?.current?.getCurrentStep());
   };
   const onPrev = () => {
@@ -30,17 +26,22 @@ function App() {
     sliderInstance?.current?.goToSlide(numb);
   };
 
+  const getCurrent = () => {
+    setCurrentStep(sliderInstance?.current?.getCurrentStep());
+  };
+
   return (
     <div className="App">
       <header className="App-header">
         <button onClick={() => onPrev()}>Prev</button>
         <button onClick={() => onNext()}>Next</button>
+        <button onClick={() => getCurrent()}>Get Current</button>
         <div>currentStep: {currentStep}</div>
 
         <ul>
           <button onClick={() => goToSlide(0)}>0</button>
           <button onClick={() => goToSlide(1)}>1</button>
-          <button onClick={() => goToSlide(2)}>3</button>
+          <button onClick={() => goToSlide(2)}>2</button>
           <button onClick={() => goToSlide(3)}>3</button>
           <button onClick={() => goToSlide(4)}>4</button>
           <button onClick={() => goToSlide(5)}>5</button>
@@ -52,9 +53,9 @@ function App() {
 
         <Slider
           ref={sliderInstance}
-          slidesToShow={3}
+          slidesToShow={[1, 2, 4]}
           speed={200}
-          slidesToScroll={1}
+          slidesToScroll={[1, 2, 4]}
         >
           <li
             className={classes.listItem}
