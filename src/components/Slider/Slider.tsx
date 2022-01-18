@@ -1,6 +1,20 @@
 import { makeStyles } from "@material-ui/core/styles";
 import clsx from "clsx";
-import React, { Children, createRef, useEffect, useState } from "react";
+import React, {
+  Children,
+  createRef,
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useState,
+} from "react";
+
+/* //TODO  
+  - responsive
+  - get the currentStep on a good way
+  - slider move when 25% of the displayed element is moved
+  - hovering bug goes to first page
+*/
 
 const useStyles = makeStyles(() => ({
   root: {
@@ -25,7 +39,7 @@ const useStyles = makeStyles(() => ({
   },
 }));
 
-interface ISliderSettings {
+export interface ISliderSettings {
   speed?: number;
   slidesToShow?: number;
   slidesToScroll?: number;
@@ -33,152 +47,152 @@ interface ISliderSettings {
   children: React.ReactChild[];
 }
 
-interface ISliderValues {
-  goToNext: () => void;
-  goToPrevious: () => void;
-  goToSlide: (index: number) => void;
-  render: unknown; //TODO
-  currentStep: number;
-}
+type Props = ISliderSettings & React.RefAttributes<unknown>;
 
-export const useSlider = ({
-  speed = 500,
-  slidesToShow = 1,
-  slidesToScroll = 1,
-  draggable = true,
-  children,
-}: ISliderSettings): ISliderValues => {
-  const classes = useStyles();
-  const wrapperRef = createRef<HTMLDivElement>();
-  const listRef = createRef<HTMLDivElement>();
-  const numbOfSlides = Children.toArray(children).length;
-  const [wrapperWidth, setWrapperWidth] = useState<number>(0);
-  const [grabbing, setGrabbing] = useState<boolean>(false);
-  const [movingXPosition, setMovingXPosition] = useState<number>(-0);
-  const [stoppedXPosition, setStoppedXPosition] = useState<number>(-0);
-  const step = 100 / (numbOfSlides / slidesToScroll);
-  const minStep = -100 + 100 / (numbOfSlides / slidesToShow);
-  const [touchDown, setTouchDown] = useState<number>(0);
-  const [currentSpeed, setCurrentSpeed] = useState<number>(speed);
-  const [currentStep, setCurrentStep] = useState<number>(0);
-  const outOfBoundsSpeed = 800;
-  const [visibleSlides, setVisibleSlides] = useState<{
-    start: number;
-    end: number;
-  }>({
-    start: currentStep,
-    end: slidesToShow,
-  });
-
-  useEffect(() => {
-    setVisibleSlides({
-      start: (Math.abs(stoppedXPosition / 100) * 100) / step,
-      end: (Math.abs(stoppedXPosition / 100) * 100) / step + slidesToShow - 1,
+const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
+  (props: ISliderSettings, ref) => {
+    const {
+      speed = 500,
+      slidesToShow = 1,
+      slidesToScroll = 1,
+      draggable = true,
+      children,
+    } = props;
+    const classes = useStyles();
+    const wrapperRef = createRef<HTMLDivElement>();
+    const listRef = createRef<HTMLDivElement>();
+    const numbOfSlides = Children.toArray(children).length;
+    const [wrapperWidth, setWrapperWidth] = useState<number>(0);
+    const [grabbing, setGrabbing] = useState<boolean>(false);
+    const [movingXPosition, setMovingXPosition] = useState<number>(-0);
+    const [stoppedXPosition, setStoppedXPosition] = useState<number>(-0);
+    const step = 100 / (numbOfSlides / slidesToScroll);
+    const minStep = -100 + 100 / (numbOfSlides / slidesToShow);
+    const [touchDown, setTouchDown] = useState<number>(0);
+    const [currentSpeed, setCurrentSpeed] = useState<number>(speed);
+    const [currentStep, setCurrentStep] = useState<number>(0);
+    const outOfBoundsSpeed = 800;
+    const [visibleSlides, setVisibleSlides] = useState<{
+      start: number;
+      end: number;
+    }>({
+      start: currentStep,
+      end: slidesToShow,
     });
-  }, [stoppedXPosition]);
 
-  useEffect(() => {
-    if (wrapperRef.current?.offsetWidth) {
-      setWrapperWidth(wrapperRef.current?.offsetWidth);
-    }
-  }, [wrapperRef]);
+    useImperativeHandle(ref, () => ({
+      goToNext: () => {
+        const newTransformValue =
+          movingXPosition - step < minStep ? minStep : movingXPosition - step;
+        setCurrentStepValue(newTransformValue);
+        setMovingXPosition(newTransformValue);
+        setStoppedXPosition(newTransformValue);
+      },
+      goToPrevious: () => {
+        const newTransformValue =
+          movingXPosition + step > 0 ? 0 : movingXPosition + step;
+        setCurrentStepValue(newTransformValue);
+        setMovingXPosition(newTransformValue);
+        setStoppedXPosition(newTransformValue);
+      },
+      goToSlide: (index: number) => {
+        setCurrentStep(index);
+        const newXValue = -(100 / numbOfSlides) * index;
+        if (newXValue < minStep) {
+          setMovingXPosition(minStep);
+        } else {
+          setStoppedXPosition(minStep);
+          setMovingXPosition(-(100 / numbOfSlides) * index);
+          setStoppedXPosition(-(100 / numbOfSlides) * index);
+        }
+      },
+      getCurrentStep: () => currentStep,
+    }));
 
-  const goToNext = () => {
-    setMovingXPosition(
-      movingXPosition - step < minStep ? minStep : movingXPosition - step
-    );
-    setStoppedXPosition(
-      movingXPosition - step < minStep ? minStep : movingXPosition - step
-    );
-  };
+    useEffect(() => {
+      setVisibleSlides({
+        start: Math.abs(stoppedXPosition / (100 / numbOfSlides)),
+        end:
+          Math.abs(stoppedXPosition / (100 / numbOfSlides)) + slidesToShow - 1,
+      });
+    }, [stoppedXPosition]);
 
-  const goToPrevious = () => {
-    setMovingXPosition(movingXPosition + step > 0 ? 0 : movingXPosition + step);
-    setStoppedXPosition(
-      movingXPosition + step > 0 ? 0 : movingXPosition + step
-    );
-  };
-
-  const goToSlide = (index: number) => {
-    setCurrentStep(index);
-    const newXValue = -(100 / numbOfSlides) * index;
-    if (newXValue < minStep) {
-      setMovingXPosition(minStep);
-      setStoppedXPosition(minStep);
-    } else {
-      setMovingXPosition(-(100 / numbOfSlides) * index);
-      setStoppedXPosition(-(100 / numbOfSlides) * index);
-    }
-  };
-
-  const onDrag = (position: number, previousPosition: number) => {
-    if (!grabbing) {
-      return;
-    }
-    const listWidth = listRef.current?.offsetWidth ?? 1;
-    const newTransformValue =
-      movingXPosition - ((previousPosition - position) / listWidth) * 100;
-    const outOfBounds = minStep > newTransformValue || 0 < newTransformValue;
-    setCurrentSpeed(outOfBounds ? outOfBoundsSpeed : 0);
-    setTouchDown(position);
-    setMovingXPosition(newTransformValue);
-  };
-
-  const stoppedMoving = () => {
-    setGrabbing(false);
-    setCurrentSpeed(speed);
-    const percentageOfChange = 25;
-
-    const shouldChange =
-      (Math.abs(stoppedXPosition - movingXPosition) / step) * 100 >=
-      percentageOfChange;
-    const previous = stoppedXPosition - movingXPosition < 0;
-
-    const newValue = shouldChange
-      ? previous
-        ? stoppedXPosition + step
-        : stoppedXPosition - step
-      : stoppedXPosition;
-
-    if (!(newValue > 0 || newValue < minStep)) {
-      setCurrentStep(Math.abs(newValue / step));
-    }
-
-    const newPosition =
-      newValue > 0 ? 0 : newValue < minStep ? minStep : newValue;
-
-    setMovingXPosition(newPosition);
-    setStoppedXPosition(newPosition);
-  };
-
-  const startDragging = (position: number) => {
-    setGrabbing(true);
-    setTouchDown(position);
-  };
-
-  useEffect(() => {
-    const currentWrapper = listRef.current;
-    window.addEventListener("resize", () => {
-      if (currentWrapper?.offsetWidth) {
-        setWrapperWidth(currentWrapper?.offsetWidth);
+    useEffect(() => {
+      if (wrapperRef.current?.offsetWidth) {
+        setWrapperWidth(wrapperRef.current?.offsetWidth);
       }
-    });
-    return () => {
-      window.removeEventListener("resize", () => {
+    }, [wrapperRef]);
+
+    const setCurrentStepValue = (xTransformValue: number) => {
+      setCurrentStep(Math.abs(xTransformValue / (100 / numbOfSlides)));
+    };
+
+    const onDrag = (position: number, previousPosition: number) => {
+      if (!grabbing) {
+        return;
+      }
+      const listWidth = listRef.current?.offsetWidth ?? 1;
+      const newTransformValue =
+        movingXPosition - ((previousPosition - position) / listWidth) * 100;
+      const outOfBounds = minStep > newTransformValue || 0 < newTransformValue;
+      setCurrentSpeed(outOfBounds ? outOfBoundsSpeed : 0);
+      setTouchDown(position);
+      setMovingXPosition(newTransformValue);
+    };
+
+    const stoppedMoving = () => {
+      setGrabbing(false);
+      setCurrentSpeed(speed);
+      const percentageOfChange = 25;
+
+      const shouldChange =
+        (Math.abs(stoppedXPosition - movingXPosition) / step) * 100 >=
+        percentageOfChange;
+      const previous = stoppedXPosition - movingXPosition < 0;
+
+      const newValue = shouldChange
+        ? previous
+          ? stoppedXPosition + step
+          : stoppedXPosition - step
+        : stoppedXPosition;
+
+      if (!(newValue > 0 || newValue < minStep)) {
+        setCurrentStepValue(newValue);
+      } else if (newValue > 0) {
+        setCurrentStepValue(0);
+      } else {
+        setCurrentStepValue(minStep);
+      }
+
+      const newPosition =
+        newValue > 0 ? 0 : newValue < minStep ? minStep : newValue;
+
+      setMovingXPosition(newPosition);
+      setStoppedXPosition(newPosition);
+    };
+
+    const startDragging = (position: number) => {
+      setGrabbing(true);
+      setTouchDown(position);
+    };
+
+    useEffect(() => {
+      const currentWrapper = listRef.current;
+      window.addEventListener("resize", () => {
         if (currentWrapper?.offsetWidth) {
           setWrapperWidth(currentWrapper?.offsetWidth);
         }
       });
-    };
-  }, []);
+      return () => {
+        window.removeEventListener("resize", () => {
+          if (currentWrapper?.offsetWidth) {
+            setWrapperWidth(currentWrapper?.offsetWidth);
+          }
+        });
+      };
+    }, []);
 
-  return {
-    goToNext,
-    goToPrevious,
-    goToSlide,
-    currentStep,
-    //maybe add the props here instead???
-    render: (
+    return (
       <div className={classes.root} ref={wrapperRef}>
         <div
           ref={listRef}
@@ -237,6 +251,8 @@ export const useSlider = ({
           })}
         </div>
       </div>
-    ),
-  };
-};
+    );
+  }
+);
+
+export default Slider;

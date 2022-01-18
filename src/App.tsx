@@ -1,6 +1,6 @@
 import { makeStyles } from "@material-ui/core";
-import React from "react";
-import { useSlider } from "./components/Slider/Slider";
+import React, { useEffect, useRef, useState } from "react";
+import Slider from "./components/Slider/Slider";
 
 const useStyles = makeStyles(() => ({
   listItem: {
@@ -11,17 +11,51 @@ const useStyles = makeStyles(() => ({
 
 function App() {
   const classes = useStyles();
-  const { goToNext, render, goToPrevious } = useSlider({
-    children: [<div></div>],
-  });
-  /* const Slider = useSlider */
+  const sliderInstance = useRef<any>();
+  const [currentStep, setCurrentStep] = useState<number>(0);
 
-  /*   console.log("goToNext", goToNext()); */
+  useEffect(() => {
+    console.log("sliderInstance", sliderInstance);
+  }, [sliderInstance]);
+
+  const onNext = () => {
+    sliderInstance?.current?.goToNext();
+    setCurrentStep(sliderInstance?.current?.getCurrentStep());
+  };
+  const onPrev = () => {
+    sliderInstance?.current?.goToPrevious();
+  };
+
+  const goToSlide = (numb: number) => {
+    sliderInstance?.current?.goToSlide(numb);
+  };
 
   return (
     <div className="App">
       <header className="App-header">
-        {/*  <Slider slidesToShow={4} speed={200} slidesToScroll={4}>
+        <button onClick={() => onPrev()}>Prev</button>
+        <button onClick={() => onNext()}>Next</button>
+        <div>currentStep: {currentStep}</div>
+
+        <ul>
+          <button onClick={() => goToSlide(0)}>0</button>
+          <button onClick={() => goToSlide(1)}>1</button>
+          <button onClick={() => goToSlide(2)}>3</button>
+          <button onClick={() => goToSlide(3)}>3</button>
+          <button onClick={() => goToSlide(4)}>4</button>
+          <button onClick={() => goToSlide(5)}>5</button>
+          <button onClick={() => goToSlide(6)}>6</button>
+          <button onClick={() => goToSlide(7)}>7</button>
+          <button onClick={() => goToSlide(8)}>8</button>
+          <button onClick={() => goToSlide(9)}>9</button>
+        </ul>
+
+        <Slider
+          ref={sliderInstance}
+          slidesToShow={3}
+          speed={200}
+          slidesToScroll={1}
+        >
           <li
             className={classes.listItem}
             style={{ backgroundColor: "lightblue" }}
@@ -84,7 +118,7 @@ function App() {
           <li className={classes.listItem} style={{ backgroundColor: "red" }}>
             9
           </li>
-        </Slider> */}
+        </Slider>
       </header>
     </div>
   );
