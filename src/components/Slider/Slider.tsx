@@ -72,7 +72,7 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
     const [slidesToScrollState, setSlidesToScrollState] = useState<number>(
       slidesToScroll[0]
     );
-
+    const draggableState = draggable && slidesToShowState < numbOfSlides;
     const step = 100 / (numbOfSlides / slidesToScrollState);
     const minStep = -100 + 100 / (numbOfSlides / slidesToShowState);
     const [touchDown, setTouchDown] = useState<number>(0);
@@ -247,31 +247,31 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
           className={clsx(
             classes.list,
             grabbing && classes.grabbing,
-            !draggable && classes.nonDraggable
+            !draggableState && classes.nonDraggable
           )}
           onTouchStart={
-            draggable
+            draggableState
               ? (e: React.TouchEvent) =>
                   startDragging(e.changedTouches[0].clientX)
               : undefined
           }
-          onTouchEnd={draggable ? () => stoppedMoving() : undefined}
+          onTouchEnd={draggableState ? () => stoppedMoving() : undefined}
           onTouchMove={
-            draggable
+            draggableState
               ? (e: React.TouchEvent) =>
                   onDrag(e.changedTouches[0].clientX, touchDown)
               : undefined
           }
           onMouseDown={
-            draggable
+            draggableState
               ? (e: React.MouseEvent) => startDragging(e.clientX)
               : undefined
           }
-          onMouseUp={draggable ? () => stoppedMoving() : undefined}
+          onMouseUp={draggableState ? () => stoppedMoving() : undefined}
           onMouseMove={
-            draggable ? (e) => onDrag(e.clientX, touchDown) : undefined
+            draggableState ? (e) => onDrag(e.clientX, touchDown) : undefined
           }
-          onMouseOut={draggable ? () => stoppedMoving() : undefined}
+          onMouseOut={draggableState ? () => stoppedMoving() : undefined}
           style={{
             transition: `transform ${currentSpeed}ms ease`,
             transform: `translateX(${movingXPosition}%)`,

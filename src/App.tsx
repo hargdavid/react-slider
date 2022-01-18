@@ -42,13 +42,13 @@ function App() {
           <button onClick={() => goToSlide(0)}>0</button>
           <button onClick={() => goToSlide(1)}>1</button>
           <button onClick={() => goToSlide(2)}>2</button>
-          <button onClick={() => goToSlide(3)}>3</button>
+          {/*   <button onClick={() => goToSlide(3)}>3</button>
           <button onClick={() => goToSlide(4)}>4</button>
           <button onClick={() => goToSlide(5)}>5</button>
           <button onClick={() => goToSlide(6)}>6</button>
           <button onClick={() => goToSlide(7)}>7</button>
           <button onClick={() => goToSlide(8)}>8</button>
-          <button onClick={() => goToSlide(9)}>9</button>
+          <button onClick={() => goToSlide(9)}>9</button> */}
         </ul>
 
         <Slider
@@ -78,7 +78,7 @@ function App() {
           >
             2
           </li>
-          <li
+          {/*   <li
             className={classes.listItem}
             style={{ backgroundColor: "orange" }}
             onClick={() => console.log("hellog")}
@@ -118,7 +118,7 @@ function App() {
           </li>
           <li className={classes.listItem} style={{ backgroundColor: "red" }}>
             9
-          </li>
+          </li> */}
         </Slider>
       </header>
     </div>
