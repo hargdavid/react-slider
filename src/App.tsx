@@ -117,9 +117,9 @@ function App() {
           >
             8
           </li>
-          {/*   <li className={classes.listItem} style={{ backgroundColor: "red" }}>
+          <li className={classes.listItem} style={{ backgroundColor: "red" }}>
             9
-          </li> */}
+          </li>
         </Slider>
       </header>
     </div>

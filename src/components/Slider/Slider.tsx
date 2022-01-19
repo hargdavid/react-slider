@@ -8,6 +8,7 @@ import React, {
   useImperativeHandle,
   useState,
 } from "react";
+import { setBreakpointAndSize } from "../../helpers/setBreakpointAndSize";
 
 const useStyles = makeStyles(() => ({
   root: {
@@ -16,21 +17,26 @@ const useStyles = makeStyles(() => ({
     position: "relative",
     overflowX: "hidden",
     width: "100%",
-    cursor: "grab",
   },
   grabbing: {
     cursor: "grabbing",
   },
+  list: {
+    cursor: "grab",
+    whiteSpace: "nowrap",
+  },
   nonDraggable: {
     cursor: "auto",
-  },
-  list: {
-    whiteSpace: "nowrap",
   },
   listItem: {
     display: "inline-flex",
   },
 }));
+
+export const sliderTestIds = {
+  list: "SlidertestIds_list",
+  slide: "SlidertestIds_slide",
+};
 
 export interface ISliderSettings {
   speed?: number;
@@ -38,13 +44,6 @@ export interface ISliderSettings {
   slidesToScroll?: number[];
   draggable?: boolean;
   children: React.ReactChild[];
-}
-
-enum BREAKPOINTS {
-  sm = 600,
-  md = 900,
-  lg = 1200,
-  xl = 1536,
 }
 
 type Props = ISliderSettings & React.RefAttributes<unknown>;
@@ -212,115 +211,105 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
       setTouchDown(position);
     };
 
-    const setArrayValue = (numb: number, arr: number[]): number => {
-      if (arr.length > numb) {
-        return arr[numb];
-      } else {
-        return arr[arr.length - 1];
-      }
-    };
-
-    /* Setting number of visible slides and scroll for different screenSizes */
-    const setBreakpointAndSize = (screenSize: number) => {
-      let newSlidesToScroll: number = slidesToScroll[0];
-      let newSlidesToShow: number = slidesToShow[0];
-
-      if (screenSize <= BREAKPOINTS.sm) {
-        newSlidesToScroll = setArrayValue(0, slidesToScroll);
-        newSlidesToShow = setArrayValue(0, slidesToShow);
-      } else if (screenSize > BREAKPOINTS.sm && screenSize < BREAKPOINTS.md) {
-        newSlidesToScroll = setArrayValue(1, slidesToScroll);
-        newSlidesToShow = setArrayValue(1, slidesToShow);
-      } else if (screenSize > BREAKPOINTS.md && screenSize < BREAKPOINTS.lg) {
-        newSlidesToScroll = setArrayValue(2, slidesToScroll);
-        newSlidesToShow = setArrayValue(2, slidesToShow);
-      } else {
-        newSlidesToScroll = setArrayValue(3, slidesToScroll);
-        newSlidesToShow = setArrayValue(3, slidesToShow);
-      }
-
+    const setNewScrollAndShowValues = () => {
+      const { newSlidesToScroll, newSlidesToShow } = setBreakpointAndSize(
+        window.innerWidth,
+        slidesToScroll,
+        slidesToShow
+      );
       setSlidesToScrollState(newSlidesToScroll);
       setSlidesToShowState(newSlidesToShow);
     };
 
     useEffect(() => {
-      setBreakpointAndSize(window.innerWidth);
+      setNewScrollAndShowValues();
+
       const currentWrapper = listRef.current;
       window.addEventListener("resize", () => {
         if (currentWrapper?.offsetWidth) {
           setWrapperWidth(currentWrapper?.offsetWidth);
         }
-        setBreakpointAndSize(window.innerWidth);
+        setNewScrollAndShowValues();
       });
       return () => {
         window.removeEventListener("resize", () => {
           if (currentWrapper?.offsetWidth) {
             setWrapperWidth(currentWrapper?.offsetWidth);
           }
-          setBreakpointAndSize(window.innerWidth);
+          setNewScrollAndShowValues();
         });
       };
     }, []);
 
     return (
-      <div className={classes.root} ref={wrapperRef}>
-        <div
-          ref={listRef}
-          className={clsx(
-            classes.list,
-            grabbing && classes.grabbing,
-            !isDraggable && classes.nonDraggable
-          )}
-          onTouchStart={
-            isDraggable
-              ? (e: React.TouchEvent) =>
-                  startDragging(e.changedTouches[0].clientX)
-              : undefined
-          }
-          onTouchEnd={isDraggable ? () => stoppedMoving() : undefined}
-          onTouchMove={
-            isDraggable
-              ? (e: React.TouchEvent) =>
-                  onDrag(e.changedTouches[0].clientX, touchDown)
-              : undefined
-          }
-          onMouseDown={
-            isDraggable
-              ? (e: React.MouseEvent) => startDragging(e.clientX)
-              : undefined
-          }
-          onMouseUp={isDraggable ? () => stoppedMoving() : undefined}
-          onMouseMove={
-            isDraggable ? (e) => onDrag(e.clientX, touchDown) : undefined
-          }
-          onMouseOut={isDraggable ? () => stoppedMoving() : undefined}
-          style={{
-            transition: `transform ${currentSpeed}ms ease`,
-            transform: `translateX(${movingXPosition}%)`,
-          }}
-        >
-          {Children.map(children, (child: React.ReactChild, index: number) => {
-            if (React.isValidElement(child)) {
-              return (
-                <div
-                  style={{
-                    width: wrapperWidth / slidesToShowState,
-                  }}
-                  className={classes.listItem}
-                  data-index={index}
-                  aria-hidden={
-                    index < visibleSlides.start || index > visibleSlides.end
+      <>
+        {numbOfSlides > 0 && (
+          <div className={classes.root} ref={wrapperRef}>
+            <div
+              ref={listRef}
+              className={clsx(
+                classes.list,
+                grabbing && classes.grabbing,
+                !isDraggable && classes.nonDraggable
+              )}
+              onTouchStart={
+                isDraggable
+                  ? (e: React.TouchEvent) =>
+                      startDragging(e.changedTouches[0].clientX)
+                  : undefined
+              }
+              onTouchEnd={isDraggable ? () => stoppedMoving() : undefined}
+              onTouchMove={
+                isDraggable
+                  ? (e: React.TouchEvent) =>
+                      onDrag(e.changedTouches[0].clientX, touchDown)
+                  : undefined
+              }
+              onMouseDown={
+                isDraggable
+                  ? (e: React.MouseEvent) => startDragging(e.clientX)
+                  : undefined
+              }
+              onMouseUp={isDraggable ? () => stoppedMoving() : undefined}
+              onMouseMove={
+                isDraggable ? (e) => onDrag(e.clientX, touchDown) : undefined
+              }
+              onMouseOut={isDraggable ? () => stoppedMoving() : undefined}
+              style={{
+                transition: `transform ${currentSpeed}ms ease`,
+                transform: `translateX(${movingXPosition}%)`,
+              }}
+              data-testid={sliderTestIds.list}
+            >
+              {Children.map(
+                children,
+                (child: React.ReactChild, index: number) => {
+                  if (React.isValidElement(child)) {
+                    return (
+                      <div
+                        style={{
+                          width: wrapperWidth / slidesToShowState,
+                        }}
+                        className={classes.listItem}
+                        data-index={index}
+                        aria-hidden={
+                          index < visibleSlides.start ||
+                          index > visibleSlides.end
+                        }
+                        data-testid={sliderTestIds.slide}
+                      >
+                        {React.cloneElement(child, {
+                          style: { ...child.props.style, width: "100%" },
+                        })}
+                      </div>
+                    );
                   }
-                >
-                  {React.cloneElement(child, {
-                    style: { ...child.props.style, width: "100%" },
-                  })}
-                </div>
-              );
-            }
-          })}
-        </div>
-      </div>
+                }
+              )}
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 );
