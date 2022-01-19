@@ -37,10 +37,12 @@
 
 To access the functions from the Slider you need to use a ref for the slider with the useRef hook
 
-    ```javascript
+    ```jsx
     const ref = useRef();
+
     const goToNext = ref.current?.goToNext();
-    <Slider ref={ref}
+
+    <Slider ref={ref} />
     ```
 
 - ### goToSlide:
