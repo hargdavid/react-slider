@@ -72,7 +72,7 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
     const [slidesToScrollState, setSlidesToScrollState] = useState<number>(
       slidesToScroll[0]
     );
-    const draggableState = draggable && slidesToShowState < numbOfSlides;
+    const isDraggable = draggable && slidesToShowState < numbOfSlides;
     const step = 100 / (numbOfSlides / slidesToScrollState);
     const minStep = -100 + 100 / (numbOfSlides / slidesToShowState);
     const [touchDown, setTouchDown] = useState<number>(0);
@@ -84,12 +84,18 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
       end: number;
     }>({
       start: currentStep,
-      end: slidesToShowState,
+      end: slidesToShowState - 1,
     });
+    const [isDisabledButtons, setIsDisabledButtons] = useState<boolean>(
+      visibleSlides.start === 0 && numbOfSlides <= visibleSlides.end
+    );
 
     /* What will be returned to be available from ref */
     useImperativeHandle(ref, () => ({
       goToNext: () => {
+        if (isDisabledButtons) {
+          return;
+        }
         const newTransformValue =
           movingXPosition - step < minStep ? minStep : movingXPosition - step;
         setCurrentStepValue(newTransformValue);
@@ -97,6 +103,9 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
         setStoppedXPosition(newTransformValue);
       },
       goToPrevious: () => {
+        if (isDisabledButtons) {
+          return;
+        }
         const newTransformValue =
           movingXPosition + step > 0 ? 0 : movingXPosition + step;
         setCurrentStepValue(newTransformValue);
@@ -108,6 +117,9 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
     }));
 
     const goToSlideFunc = (index: number) => {
+      if (isDisabledButtons) {
+        return;
+      }
       setCurrentStep(index);
       const newXValue = -(100 / numbOfSlides) * index;
       if (newXValue < minStep) {
@@ -122,13 +134,20 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
     /* Deciding which slides that should have aria-hidden false/true value  */
     useEffect(() => {
       setVisibleSlides({
-        start: Math.abs(stoppedXPosition / (100 / numbOfSlides)),
-        end:
+        start: Math.round(Math.abs(stoppedXPosition / (100 / numbOfSlides))),
+        end: Math.round(
           Math.abs(stoppedXPosition / (100 / numbOfSlides)) +
-          slidesToShowState -
-          1,
+            slidesToShowState -
+            1
+        ),
       });
-    }, [stoppedXPosition]);
+    }, [stoppedXPosition, slidesToShowState]);
+
+    useEffect(() => {
+      setIsDisabledButtons(
+        visibleSlides.start === 0 && numbOfSlides <= visibleSlides.end
+      );
+    }, [numbOfSlides, visibleSlides]);
 
     useEffect(() => {
       if (wrapperRef.current?.offsetWidth) {
@@ -137,7 +156,9 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
     }, [wrapperRef]);
 
     const setCurrentStepValue = (xTransformValue: number) => {
-      setCurrentStep(Math.abs(xTransformValue / (100 / numbOfSlides)));
+      setCurrentStep(
+        Math.round(Math.abs(xTransformValue / (100 / numbOfSlides)))
+      );
     };
 
     /* Actions functions */
@@ -199,6 +220,7 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
       }
     };
 
+    /* Setting number of visible slides and scroll for different screenSizes */
     const setBreakpointAndSize = (screenSize: number) => {
       let newSlidesToScroll: number = slidesToScroll[0];
       let newSlidesToShow: number = slidesToShow[0];
@@ -247,31 +269,31 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
           className={clsx(
             classes.list,
             grabbing && classes.grabbing,
-            !draggableState && classes.nonDraggable
+            !isDraggable && classes.nonDraggable
           )}
           onTouchStart={
-            draggableState
+            isDraggable
               ? (e: React.TouchEvent) =>
                   startDragging(e.changedTouches[0].clientX)
               : undefined
           }
-          onTouchEnd={draggableState ? () => stoppedMoving() : undefined}
+          onTouchEnd={isDraggable ? () => stoppedMoving() : undefined}
           onTouchMove={
-            draggableState
+            isDraggable
               ? (e: React.TouchEvent) =>
                   onDrag(e.changedTouches[0].clientX, touchDown)
               : undefined
           }
           onMouseDown={
-            draggableState
+            isDraggable
               ? (e: React.MouseEvent) => startDragging(e.clientX)
               : undefined
           }
-          onMouseUp={draggableState ? () => stoppedMoving() : undefined}
+          onMouseUp={isDraggable ? () => stoppedMoving() : undefined}
           onMouseMove={
-            draggableState ? (e) => onDrag(e.clientX, touchDown) : undefined
+            isDraggable ? (e) => onDrag(e.clientX, touchDown) : undefined
           }
-          onMouseOut={draggableState ? () => stoppedMoving() : undefined}
+          onMouseOut={isDraggable ? () => stoppedMoving() : undefined}
           style={{
             transition: `transform ${currentSpeed}ms ease`,
             transform: `translateX(${movingXPosition}%)`,

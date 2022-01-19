@@ -53,9 +53,9 @@ function App() {
 
         <Slider
           ref={sliderInstance}
-          slidesToShow={[1, 2, 4]}
+          slidesToShow={[1, 2, 10]}
           speed={200}
-          slidesToScroll={[1, 2, 4]}
+          slidesToScroll={[1, 2, 3]}
         >
           <li
             className={classes.listItem}
@@ -78,13 +78,14 @@ function App() {
           >
             2
           </li>
-          {/*   <li
+          <li
             className={classes.listItem}
             style={{ backgroundColor: "orange" }}
             onClick={() => console.log("hellog")}
           >
             3
           </li>
+
           <li className={classes.listItem} style={{ backgroundColor: "red" }}>
             4
           </li>
@@ -116,7 +117,7 @@ function App() {
           >
             8
           </li>
-          <li className={classes.listItem} style={{ backgroundColor: "red" }}>
+          {/*   <li className={classes.listItem} style={{ backgroundColor: "red" }}>
             9
           </li> */}
         </Slider>
