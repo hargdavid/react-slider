@@ -38,11 +38,9 @@
 To access the functions from the Slider you need to use a ref for the slider with the useRef hook
 
     ```javascript
-    const ref = useRef()
-
-    const goToNext = ref.current?.goToNext()
-        ...
-    <Slider ref={ref} ...
+    const ref = useRef();
+    const goToNext = ref.current?.goToNext();
+    <Slider ref={ref}
     ```
 
 - ### goToSlide:
