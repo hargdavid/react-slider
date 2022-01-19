@@ -246,6 +246,7 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
         {numbOfSlides > 0 && (
           <div className={classes.root} ref={wrapperRef}>
             <div
+              role="tablist"
               ref={listRef}
               className={clsx(
                 classes.list,
@@ -280,6 +281,8 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
                 transform: `translateX(${movingXPosition}%)`,
               }}
               data-testid={sliderTestIds.list}
+              onBlur={isDraggable ? () => stoppedMoving() : undefined}
+              tabIndex={0}
             >
               {Children.map(
                 children,
