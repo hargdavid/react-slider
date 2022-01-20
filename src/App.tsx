@@ -30,6 +30,19 @@ function App() {
     setCurrentStep(sliderInstance?.current?.getCurrentStep());
   };
 
+  const sliderSlidesArr = [
+    { backgroundColor: "lightblue" },
+    { backgroundColor: "lightyellow" },
+    { backgroundColor: "lightgreen" },
+    { backgroundColor: "orange" },
+    { backgroundColor: "red" },
+    { backgroundColor: "lightblue" },
+    { backgroundColor: "lightyellow" },
+    { backgroundColor: "lightgreen" },
+    { backgroundColor: "orange" },
+    { backgroundColor: "red" },
+  ];
+
   return (
     <div className="App">
       <header className="App-header">
@@ -39,87 +52,28 @@ function App() {
         <div>currentStep: {currentStep}</div>
 
         <ul>
-          <button onClick={() => goToSlide(0)}>0</button>
-          <button onClick={() => goToSlide(1)}>1</button>
-          <button onClick={() => goToSlide(2)}>2</button>
-          {/*   <button onClick={() => goToSlide(3)}>3</button>
-          <button onClick={() => goToSlide(4)}>4</button>
-          <button onClick={() => goToSlide(5)}>5</button>
-          <button onClick={() => goToSlide(6)}>6</button>
-          <button onClick={() => goToSlide(7)}>7</button>
-          <button onClick={() => goToSlide(8)}>8</button>
-          <button onClick={() => goToSlide(9)}>9</button> */}
+          {sliderSlidesArr.map((slide, index) => (
+            <button key={index} onClick={() => goToSlide(index)}>
+              {index}
+            </button>
+          ))}
         </ul>
 
         <Slider
           ref={sliderInstance}
-          slidesToShow={[1, 2, 10]}
+          slidesToShow={[1, 2, 6]}
           speed={200}
           slidesToScroll={[1, 2, 3]}
         >
-          <li
-            className={classes.listItem}
-            style={{ backgroundColor: "lightblue" }}
-            onClick={() => console.log("hellog")}
-          >
-            0
-          </li>
-          <li
-            className={classes.listItem}
-            style={{ backgroundColor: "lightyellow" }}
-            onClick={() => console.log("hellog")}
-          >
-            1
-          </li>
-          <li
-            className={classes.listItem}
-            style={{ backgroundColor: "lightgreen" }}
-            onClick={() => console.log("hellog")}
-          >
-            2
-          </li>
-          <li
-            className={classes.listItem}
-            style={{ backgroundColor: "orange" }}
-            onClick={() => console.log("hellog")}
-          >
-            3
-          </li>
-
-          <li className={classes.listItem} style={{ backgroundColor: "red" }}>
-            4
-          </li>
-          <li
-            className={classes.listItem}
-            style={{ backgroundColor: "lightblue" }}
-            onClick={() => console.log("hellog")}
-          >
-            5
-          </li>
-          <li
-            className={classes.listItem}
-            style={{ backgroundColor: "lightyellow" }}
-            onClick={() => console.log("hellog")}
-          >
-            6
-          </li>
-          <li
-            className={classes.listItem}
-            style={{ backgroundColor: "lightgreen" }}
-            onClick={() => console.log("hellog")}
-          >
-            7
-          </li>
-          <li
-            className={classes.listItem}
-            style={{ backgroundColor: "orange" }}
-            onClick={() => console.log("hellog")}
-          >
-            8
-          </li>
-          <li className={classes.listItem} style={{ backgroundColor: "red" }}>
-            9
-          </li>
+          {sliderSlidesArr.map((slide, index) => (
+            <li
+              key={`${index}-${slide.backgroundColor}`}
+              className={classes.listItem}
+              style={{ backgroundColor: slide.backgroundColor }}
+            >
+              {index}
+            </li>
+          ))}
         </Slider>
       </header>
     </div>
