@@ -2,6 +2,8 @@
 
 ## This is a React Slider with no dependencies except React
 
+See live example [here](https://61e91c15c7a324d2f1a2971a--nifty-thompson-7c367c.netlify.app/)
+
 ### Input props
 
 - #### speed?: number; (optional)
