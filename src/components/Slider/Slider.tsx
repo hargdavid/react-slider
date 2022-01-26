@@ -4,6 +4,7 @@ import React, {
   Children,
   createRef,
   forwardRef,
+  ReactChild,
   useEffect,
   useImperativeHandle,
   useState,
@@ -22,6 +23,8 @@ const useStyles = makeStyles(() => ({
     cursor: "grabbing",
   },
   list: {
+    display: "flex",
+    flexFlow: "row",
     cursor: "grab",
     whiteSpace: "nowrap",
   },
@@ -29,7 +32,11 @@ const useStyles = makeStyles(() => ({
     cursor: "auto",
   },
   listItem: {
-    display: "inline-flex",
+    cursor: "grab",
+    display: "flex",
+    "& :nth-child(1)": {
+      width: "100%",
+    },
   },
 }));
 
@@ -43,7 +50,8 @@ export interface ISliderSettings {
   slidesToShow?: number[];
   slidesToScroll?: number[];
   draggable?: boolean;
-  children: React.ReactChild[];
+  children: any[];
+  getCurrentSlide?: (numb: number) => void;
 }
 
 type Props = ISliderSettings & React.RefAttributes<unknown>;
@@ -56,6 +64,7 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
       slidesToScroll = [1],
       draggable = true,
       children,
+      getCurrentSlide,
     } = props;
     const classes = useStyles();
     const wrapperRef = createRef<HTMLDivElement>();
@@ -89,6 +98,12 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
       visibleSlides.start === 0 && numbOfSlides <= visibleSlides.end
     );
 
+    useEffect(() => {
+      if (getCurrentSlide) {
+        getCurrentSlide(currentStep);
+      }
+    }, [currentStep]);
+
     /* What will be returned to be available from ref */
     useImperativeHandle(ref, () => ({
       goToNext: () => {
@@ -119,6 +134,7 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
       if (isDisabledButtons) {
         return;
       }
+
       setCurrentStep(index);
       const newXValue = -(100 / numbOfSlides) * index;
       if (newXValue < minStep) {
@@ -127,6 +143,83 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
       } else {
         setMovingXPosition(-(100 / numbOfSlides) * index);
         setStoppedXPosition(-(100 / numbOfSlides) * index);
+      }
+    };
+
+    const setNewScrollAndShowValues = () => {
+      const { newSlidesToScroll, newSlidesToShow } = setBreakpointAndSize(
+        window.innerWidth,
+        slidesToScroll,
+        slidesToShow
+      );
+      setSlidesToScrollState(newSlidesToScroll);
+      setSlidesToShowState(newSlidesToShow);
+    };
+
+    /* Actions functions */
+    const onDrag = (position: number, previousPosition: number) => {
+      if (!grabbing) {
+        return;
+      }
+      setOverflowToBody(true);
+      const listWidth = listRef.current?.offsetWidth ?? 1;
+      const newTransformValue =
+        movingXPosition - ((previousPosition - position) / listWidth) * 100;
+      const outOfBounds = minStep > newTransformValue || 0 < newTransformValue;
+      setCurrentSpeed(outOfBounds ? outOfBoundsSpeed : 0);
+      setTouchDown(position);
+      setMovingXPosition(newTransformValue);
+    };
+
+    const stoppedMoving = () => {
+      setGrabbing(false);
+      setCurrentSpeed(speed);
+      setOverflowToBody(false);
+      const percentageOfChange = 25;
+      const visibleTransformWidth =
+        (slidesToShowState / slidesToScrollState) * step;
+      const shouldChange =
+        Math.abs(
+          ((stoppedXPosition - movingXPosition) / visibleTransformWidth) * 100
+        ) >= percentageOfChange;
+      const previous = stoppedXPosition - movingXPosition < 0;
+      const newSlideValue = Math.abs(
+        Math.round(movingXPosition / (100 / numbOfSlides))
+      );
+
+      if (shouldChange) {
+        const x =
+          0 < movingXPosition
+            ? 0
+            : minStep > movingXPosition
+            ? numbOfSlides - 1
+            : newSlideValue === currentStep
+            ? newSlideValue + (previous ? -1 : 1)
+            : newSlideValue;
+
+        goToSlideFunc(x);
+      } else {
+        goToSlideFunc(currentStep);
+      }
+    };
+
+    const startDragging = (position: number) => {
+      setGrabbing(true);
+      setTouchDown(position);
+    };
+
+    const setDraggableElement = (e: React.MouseEvent, newValue: boolean) => {
+      const target = e.target as HTMLElement;
+      target.setAttribute("draggable", newValue.toString());
+    };
+
+    const setOverflowToBody = (grab: boolean) => {
+      if (grab) {
+        document.body.style.overflowX = "hidden";
+      } else {
+        setTimeout(() => {
+          document.body.style.overflowX = "";
+        }, speed);
       }
     };
 
@@ -158,67 +251,6 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
       setCurrentStep(
         Math.round(Math.abs(xTransformValue / (100 / numbOfSlides)))
       );
-    };
-
-    /* Actions functions */
-    const onDrag = (position: number, previousPosition: number) => {
-      if (!grabbing) {
-        return;
-      }
-      const listWidth = listRef.current?.offsetWidth ?? 1;
-      const newTransformValue =
-        movingXPosition - ((previousPosition - position) / listWidth) * 100;
-      const outOfBounds = minStep > newTransformValue || 0 < newTransformValue;
-      setCurrentSpeed(outOfBounds ? outOfBoundsSpeed : 0);
-      setTouchDown(position);
-      setMovingXPosition(newTransformValue);
-    };
-
-    const stoppedMoving = () => {
-      setGrabbing(false);
-      setCurrentSpeed(speed);
-      const percentageOfChange = 25;
-      const visibleTransformWidth =
-        (slidesToShowState / slidesToScrollState) * step;
-      const shouldChange =
-        Math.abs(
-          ((stoppedXPosition - movingXPosition) / visibleTransformWidth) * 100
-        ) >= percentageOfChange;
-      const previous = stoppedXPosition - movingXPosition < 0;
-      const newSlideValue = Math.abs(
-        Math.round(movingXPosition / (100 / numbOfSlides))
-      );
-
-      if (shouldChange) {
-        if (0 < movingXPosition) {
-          goToSlideFunc(0);
-        } else if (minStep > movingXPosition) {
-          goToSlideFunc(numbOfSlides - 1);
-        } else {
-          goToSlideFunc(
-            newSlideValue === currentStep
-              ? newSlideValue + (previous ? -1 : 1)
-              : newSlideValue
-          );
-        }
-      } else {
-        goToSlideFunc(currentStep);
-      }
-    };
-
-    const startDragging = (position: number) => {
-      setGrabbing(true);
-      setTouchDown(position);
-    };
-
-    const setNewScrollAndShowValues = () => {
-      const { newSlidesToScroll, newSlidesToShow } = setBreakpointAndSize(
-        window.innerWidth,
-        slidesToScroll,
-        slidesToShow
-      );
-      setSlidesToScrollState(newSlidesToScroll);
-      setSlidesToShowState(newSlidesToShow);
     };
 
     useEffect(() => {
@@ -276,16 +308,23 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
                 isDraggable ? (e) => onDrag(e.clientX, touchDown) : undefined
               }
               onMouseOut={isDraggable ? () => stoppedMoving() : undefined}
+              onBlur={isDraggable ? () => stoppedMoving() : undefined}
+              onMouseOver={(e: React.MouseEvent) => {
+                setDraggableElement(e, false);
+              }}
+              onMouseLeave={(e: React.MouseEvent) => {
+                setDraggableElement(e, true);
+              }}
+              onFocus={() => {}}
               style={{
                 transition: `transform ${currentSpeed}ms ease`,
                 transform: `translateX(${movingXPosition}%)`,
               }}
               data-testid={sliderTestIds.list}
-              onBlur={isDraggable ? () => stoppedMoving() : undefined}
               tabIndex={0}
             >
               {Children.map(
-                children,
+                children as ReactChild[],
                 (child: React.ReactChild, index: number) => {
                   if (React.isValidElement(child)) {
                     return (
@@ -301,9 +340,7 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
                         }
                         data-testid={sliderTestIds.slide}
                       >
-                        {React.cloneElement(child, {
-                          style: { ...child.props.style, width: "100%" },
-                        })}
+                        {React.cloneElement(child, { draggable: true })}
                       </div>
                     );
                   }
@@ -317,4 +354,4 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
   }
 );
 
-export default Slider;
+export default React.memo(Slider);
