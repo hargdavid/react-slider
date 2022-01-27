@@ -72,6 +72,7 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
     const numbOfSlides = Children.toArray(children).length;
     const [wrapperWidth, setWrapperWidth] = useState<number>(0);
     const [grabbing, setGrabbing] = useState<boolean>(false);
+    const [dragging, setDragging] = useState<boolean>(false);
     const [movingXPosition, setMovingXPosition] = useState<number>(-0);
     const [stoppedXPosition, setStoppedXPosition] = useState<number>(-0);
     const [slidesToShowState, setSlidesToShowState] = useState<number>(
@@ -106,29 +107,33 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
 
     /* What will be returned to be available from ref */
     useImperativeHandle(ref, () => ({
-      goToNext: () => {
-        if (isDisabledButtons) {
-          return;
-        }
-        const newTransformValue =
-          movingXPosition - step < minStep ? minStep : movingXPosition - step;
-        setCurrentStepValue(newTransformValue);
-        setMovingXPosition(newTransformValue);
-        setStoppedXPosition(newTransformValue);
-      },
-      goToPrevious: () => {
-        if (isDisabledButtons) {
-          return;
-        }
-        const newTransformValue =
-          movingXPosition + step > 0 ? 0 : movingXPosition + step;
-        setCurrentStepValue(newTransformValue);
-        setMovingXPosition(newTransformValue);
-        setStoppedXPosition(newTransformValue);
-      },
+      goToNext: () => goToNextFunc(),
+      goToPrevious: () => goToPrevFunc(),
       goToSlide: (index: number) => goToSlideFunc(index),
       getCurrentStep: () => currentStep,
     }));
+
+    const goToNextFunc = () => {
+      if (isDisabledButtons) {
+        return;
+      }
+      const newTransformValue =
+        movingXPosition - step < minStep ? minStep : movingXPosition - step;
+      setCurrentStepValue(newTransformValue);
+      setMovingXPosition(newTransformValue);
+      setStoppedXPosition(newTransformValue);
+    };
+
+    const goToPrevFunc = () => {
+      if (isDisabledButtons) {
+        return;
+      }
+      const newTransformValue =
+        movingXPosition + step > 0 ? 0 : movingXPosition + step;
+      setCurrentStepValue(newTransformValue);
+      setMovingXPosition(newTransformValue);
+      setStoppedXPosition(newTransformValue);
+    };
 
     const goToSlideFunc = (index: number) => {
       if (isDisabledButtons) {
@@ -161,6 +166,7 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
       if (!grabbing) {
         return;
       }
+      setDragging(true);
       setOverflowToBody(true);
       const listWidth = listRef.current?.offsetWidth ?? 1;
       const newTransformValue =
@@ -171,7 +177,13 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
       setMovingXPosition(newTransformValue);
     };
 
-    const stoppedMoving = () => {
+    const stoppedMoving = (e?: React.MouseEvent) => {
+      e?.preventDefault();
+
+      /* This is needed so the mouseUp event after drag is done won't fire after this state has changed */
+      setTimeout(() => {
+        setDragging(false);
+      }, 1);
       setGrabbing(false);
       setCurrentSpeed(speed);
       setOverflowToBody(false);
@@ -203,14 +215,10 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
       }
     };
 
-    const startDragging = (position: number) => {
+    const startDragging = (position: number, e?: React.MouseEvent) => {
+      e?.preventDefault();
       setGrabbing(true);
       setTouchDown(position);
-    };
-
-    const setDraggableElement = (e: React.MouseEvent, newValue: boolean) => {
-      const target = e.target as HTMLElement;
-      target.setAttribute("draggable", newValue.toString());
     };
 
     const setOverflowToBody = (grab: boolean) => {
@@ -251,6 +259,40 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
       setCurrentStep(
         Math.round(Math.abs(xTransformValue / (100 / numbOfSlides)))
       );
+    };
+
+    const onClickHandler = (e: React.MouseEvent) => {
+      if (dragging) {
+        e.preventDefault();
+      }
+    };
+
+    const handleKeyEvent = (e: React.KeyboardEvent) => {
+      switch (e.code) {
+        case "ArrowRight":
+          goToNextFunc();
+          break;
+        case "ArrowLeft":
+          goToPrevFunc();
+          break;
+        case "Digit1":
+        case "Digit2":
+        case "Digit3":
+        case "Digit4":
+        case "Digit5":
+        case "Digit6":
+        case "Digit7":
+        case "Digit8":
+        case "Digit9": {
+          const value = Number(e.code.replace("Digit", ""));
+          if (numbOfSlides >= value && value > 0) {
+            goToSlideFunc(value - 1);
+          }
+          break;
+        }
+        default:
+          break;
+      }
     };
 
     useEffect(() => {
@@ -300,22 +342,23 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
               }
               onMouseDown={
                 isDraggable
-                  ? (e: React.MouseEvent) => startDragging(e.clientX)
+                  ? (e: React.MouseEvent) => startDragging(e.clientX, e)
                   : undefined
               }
-              onMouseUp={isDraggable ? () => stoppedMoving() : undefined}
+              onMouseUp={
+                isDraggable
+                  ? (e: React.MouseEvent) => stoppedMoving(e)
+                  : undefined
+              }
               onMouseMove={
-                isDraggable ? (e) => onDrag(e.clientX, touchDown) : undefined
+                isDraggable
+                  ? (e: React.MouseEvent) => onDrag(e.clientX, touchDown)
+                  : undefined
               }
               onMouseOut={isDraggable ? () => stoppedMoving() : undefined}
               onBlur={isDraggable ? () => stoppedMoving() : undefined}
-              onMouseOver={(e: React.MouseEvent) => {
-                setDraggableElement(e, false);
-              }}
-              onMouseLeave={(e: React.MouseEvent) => {
-                setDraggableElement(e, true);
-              }}
-              onFocus={() => {}}
+              onKeyUp={(e: React.KeyboardEvent) => handleKeyEvent(e)}
+              onClick={(e: React.MouseEvent) => onClickHandler(e)}
               style={{
                 transition: `transform ${currentSpeed}ms ease`,
                 transform: `translateX(${movingXPosition}%)`,
@@ -354,4 +397,4 @@ const Slider: React.ForwardRefExoticComponent<Props> = forwardRef(
   }
 );
 
-export default React.memo(Slider);
+export default Slider;

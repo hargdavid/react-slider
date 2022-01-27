@@ -66,13 +66,20 @@ function App() {
           slidesToScroll={[1, 2, 3]}
         >
           {sliderSlidesArr.map((slide, index) => (
-            <li
+            <a
+              href="https://google.com"
               key={`${index}-${slide.backgroundColor}`}
               className={classes.listItem}
               style={{ backgroundColor: slide.backgroundColor }}
+              target="_blank"
+              rel="noreferrer"
             >
+              <img
+                src="https://googlechrome.github.io/samples/picture-element/images/kitten-small.png"
+                alt="cat"
+              />
               {index}
-            </li>
+            </a>
           ))}
         </Slider>
       </header>
